@@ -3,61 +3,397 @@
 <style>
 :root{--bg:#10131d;--fg:#f5f0e7;--muted:#b8bfce;--gold:#e0bd70;--blue:#6f91df;--red:#e06a60}
 *{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif}body{overflow:hidden}
-.app{height:100svh;display:flex;flex-direction:column}.top{height:52px;padding:env(safe-area-inset-top) 18px 0;display:flex;justify-content:space-between;align-items:center;font-size:10px;letter-spacing:.13em;color:#c5cad5}.bar{height:2px;background:#343a49}.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--blue),var(--red),var(--gold));transition:width .25s}
+.app{height:100svh;display:flex;flex-direction:column}
+.top{height:52px;padding:env(safe-area-inset-top) 18px 0;display:flex;justify-content:space-between;align-items:center;font-size:10px;letter-spacing:.13em;color:#c5cad5;position:relative;z-index:6}
+.toc-btn{background:rgba(32,39,56,.85);border:1px solid #485268;color:var(--gold);border-radius:16px;padding:5px 10px;font-size:10px;font-weight:800;letter-spacing:.1em;cursor:pointer;min-width:auto;display:inline-flex;align-items:center;gap:5px}
+.toc-btn:active{transform:scale(.96)}
+.bar{height:2px;background:#343a49}.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--blue),var(--red),var(--gold));transition:width .25s}
 .deck{position:relative;flex:1;overflow:hidden;touch-action:pan-y}.slide{position:absolute;inset:0;overflow-y:auto;padding:22px 23px calc(105px + env(safe-area-inset-bottom));opacity:0;transform:translateX(7%);pointer-events:none;transition:.25s}.slide.active{opacity:1;transform:none;pointer-events:auto}.slide.prev{transform:translateX(-7%)}
 .k{font-size:10px;letter-spacing:.2em;color:var(--gold);font-weight:800;margin:8px 0 14px}h1{font-size:clamp(38px,11vw,56px);line-height:1.04;letter-spacing:-.06em;margin:0 0 18px}h2{font-size:clamp(27px,7.6vw,38px);line-height:1.14;letter-spacing:-.045em;margin:0 0 15px}h3{font-size:17px;margin:0 0 7px}.lead{font-size:17px;line-height:1.65;color:#e8e6e0}.small{font-size:12px;line-height:1.7;color:var(--muted)}.blue{color:#a9c0ff}.gold{color:#f0d18d}.red{color:#ff9389}
-.hero{min-height:100%;display:flex;flex-direction:column;justify-content:center}.hero:before{content:"";position:absolute;z-index:-1;right:-60px;top:12%;width:90%;height:55%;background:radial-gradient(ellipse at center,#263e78 0,transparent 68%);opacity:.8}
+.hero{position:relative;min-height:100%;display:flex;flex-direction:column;justify-content:center;isolation:isolate}
+.hero-bg{position:absolute;inset:-22px -23px -105px;z-index:-1;overflow:hidden;pointer-events:none}
+.hero-bg img{position:absolute;right:-12%;top:4%;width:92%;height:76%;object-fit:cover;object-position:center 28%;filter:blur(7px) saturate(1.25) brightness(.72);opacity:.38;transform:scale(1.06);-webkit-mask-image:radial-gradient(ellipse 78% 72% at 62% 42%,#000 32%,transparent 82%);mask-image:radial-gradient(ellipse 78% 72% at 62% 42%,#000 32%,transparent 82%)}
+.hero-bg:after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 70% 35%,rgba(38,62,120,.28),rgba(16,19,29,.88) 72%)}
 .pills{display:flex;gap:7px;flex-wrap:wrap;margin-top:18px}.pill{border:1px solid #50596d;border-radius:22px;padding:7px 10px;font-size:10px;color:#dfe3ec}
-img.art{width:100%;max-height:51vh;object-fit:contain;background:#202636;border-radius:13px;display:block}img.art.wide{max-height:36vh;object-fit:cover}img.art.portrait{max-height:43vh;object-fit:contain}
-.cap{font-size:10px;line-height:1.5;color:#aeb6c7;margin:7px 2px 15px}.card{padding:14px;border:1px solid #30394b;background:#1b2130;border-radius:14px;margin:10px 0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.grid .card{margin:0}.tag{font-size:10px;color:var(--gold);letter-spacing:.15em;font-weight:800}.line{height:1px;background:#41495a;margin:16px 0}
+
+/* Image skeleton & loading states */
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.art-wrap{position:relative;border-radius:13px;overflow:hidden;background:linear-gradient(110deg,#1b2130 25%,#283147 50%,#1b2130 75%);background-size:200% 100%;animation:shimmer 1.6s infinite linear;min-height:160px}
+.art-wrap.loaded,.art-wrap.err{animation:none;background:#202636;min-height:auto}
+img.art{width:100%;max-height:51vh;object-fit:contain;background:transparent;border-radius:13px;display:block;opacity:0;transition:opacity .35s ease}
+.art-wrap.loaded img.art{opacity:1}
+.art-wrap.err::after{content:"이미지를 불러오지 못했습니다 (네트워크 확인 필요)";display:flex;align-items:center;justify-content:center;padding:36px 16px;font-size:11px;color:#9aa3b8;text-align:center}
+img.art.wide{max-height:36vh;object-fit:cover}img.art.portrait{max-height:43vh;object-fit:contain}
+
+/* Caption & Pompidou badge */
+.cap{font-size:10px;line-height:1.55;color:#aeb6c7;margin:7px 2px 15px}
+.badge-pompidou{display:inline-block;vertical-align:middle;margin-left:5px;padding:1.5px 6px;border-radius:4px;background:rgba(224,189,112,.16);border:1px solid rgba(224,189,112,.55);color:var(--gold);font-size:9px;font-weight:800;letter-spacing:.08em}
+
+.card{padding:14px;border:1px solid #30394b;background:#1b2130;border-radius:14px;margin:10px 0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.grid .card{margin:0}.tag{font-size:10px;color:var(--gold);letter-spacing:.15em;font-weight:800}.line{height:1px;background:#41495a;margin:16px 0}
 .timeline{display:grid;gap:9px}.t{display:grid;grid-template-columns:78px 1fr;gap:10px}.yr{color:var(--gold);font-size:11px;font-weight:800}.event{border-left:2px solid #526cae;padding:0 0 11px 12px}.event b{font-size:14px;display:block}.event span{font-size:11px;color:#bbc2d0;line-height:1.55}
 details{border:1px solid #46516a;border-radius:11px;margin-top:14px}summary{padding:11px 13px;color:#e4c781;font-size:11px;font-weight:700;cursor:pointer;list-style:none}summary:after{content:"＋";float:right}details[open] summary:after{content:"－"}details p{font-size:11px;line-height:1.7;color:#c5cbd6;padding:0 13px 12px;margin:0}
 .swatches{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:15px 0}.sw{height:68px;border-radius:8px;display:flex;align-items:end;padding:6px;font-size:10px;font-weight:700;color:white;text-shadow:0 1px 4px #000}
-.check{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #363e4e;font-size:13px;line-height:1.5}.check input{width:18px;height:18px;accent-color:#d7b96e;flex:none}
-.controls{position:absolute;bottom:0;left:0;right:0;z-index:4;display:flex;justify-content:space-between;align-items:center;padding:12px 18px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(0deg,#10131d 70%,transparent)}button{border:1px solid #50596b;background:#202738;color:white;border-radius:25px;padding:12px 16px;font-size:12px;font-weight:700;min-width:86px}button.primary{background:#f2ecdf;color:#171a24;border-color:#f2ecdf}button:disabled{opacity:.25}.dots{display:flex;gap:4px}.dot{width:5px;height:5px;border-radius:9px;background:#606779}.dot.on{width:16px;background:var(--gold)}
+
+/* Checklist with save feedback */
+.check{display:flex;align-items:flex-start;gap:10px;padding:11px 4px;border-bottom:1px solid #363e4e;font-size:13px;line-height:1.5;cursor:pointer;transition:color .2s}
+.check input{width:18px;height:18px;margin-top:1px;accent-color:#d7b96e;flex:none;cursor:pointer}
+.check.done{color:#8c95a8;text-decoration:line-through;text-decoration-color:rgba(224,189,112,.6)}
+.check-status{display:flex;justify-content:space-between;align-items:center;margin-top:14px;font-size:11px;color:var(--gold)}
+.reset-btn{background:transparent;border:1px solid #46516a;color:#b8bfce;border-radius:14px;padding:4px 10px;font-size:10px;min-width:auto;cursor:pointer}
+
+/* Controls & interactive dots */
+.controls{position:absolute;bottom:0;left:0;right:0;z-index:4;display:flex;justify-content:space-between;align-items:center;padding:12px 14px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(0deg,#10131d 75%,transparent)}
+button{border:1px solid #50596b;background:#202738;color:white;border-radius:25px;padding:11px 14px;font-size:12px;font-weight:700;min-width:78px;cursor:pointer}
+button.primary{background:#f2ecdf;color:#171a24;border-color:#f2ecdf}button:disabled{opacity:.25}
+.dots{display:flex;align-items:center;gap:2px;flex-wrap:nowrap;overflow-x:auto;max-width:52vw;padding:4px 2px;scrollbar-width:none}.dots::-webkit-scrollbar{display:none}
+.dot{padding:6px 2px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;background:transparent;border:none;min-width:auto}
+.dot i{display:block;width:6px;height:6px;border-radius:9px;background:#606779;transition:all .2s}
+.dot.on i{width:16px;background:var(--gold)}
+
+/* Chapter Jump Modal */
+.toc-modal{position:fixed;inset:0;z-index:20;background:rgba(10,12,19,.82);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .22s}
+.toc-modal.open{opacity:1;pointer-events:auto}
+.toc-sheet{width:100%;max-width:520px;max-height:78svh;overflow-y:auto;background:#171c29;border-top:1px solid #3c465e;border-radius:22px 22px 0 0;padding:18px 20px calc(24px + env(safe-area-inset-bottom));transform:translateY(16px);transition:transform .24s}
+.toc-modal.open .toc-sheet{transform:none}
+.toc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #2e3649}
+.toc-head b{font-size:13px;color:var(--gold);letter-spacing:.08em}
+.toc-close{min-width:auto;padding:5px 11px;font-size:11px;border-radius:14px}
+.toc-item{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:#1e2536;border:1px solid #2f384d;border-radius:12px;padding:11px 13px;margin-bottom:8px;min-width:auto}
+.toc-item.curr{border-color:var(--gold);background:#252d42}
+.toc-num{font-size:10px;font-weight:800;color:var(--gold);letter-spacing:.1em;min-width:36px}
+.toc-title{font-size:13px;font-weight:700;color:#f5f0e7;display:block}
+.toc-sub{font-size:10px;color:#9fa8bc;display:block;margin-top:2px}
+
 a{color:#c6d5ff}.source{font-size:10px;line-height:1.65;color:#b7bfce;overflow-wrap:anywhere}
-@media(min-width:700px){.slide{max-width:520px;left:50%;right:auto;width:100%;transform:translateX(calc(-50% + 7%));border-left:1px solid #30394b;border-right:1px solid #30394b}.slide.active{transform:translateX(-50%)}.slide.prev{transform:translateX(calc(-50% - 7%))}.controls{justify-content:center;gap:24px}}
-</style><script type="text/javascript" nonce="e8f2362455fb49f09426ab1bb8e" src="//local.adguard.org?ts=1795149488023&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_0000000006608206a3f90769a9a1bc8f%26fn%3Dchagall_previsit_iphone_v3.html%26cd%3Dattachment%26ts%3D498652%26p%3Dfs%26cid%3D1%26sig%3D2321ee5e7794db742b477db1d337fbc77154b49a11c4fe6c20790ccdbae6be03%26v%3D0&amp;app=msedge.exe&amp;css=2&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=1&amp;stealth=1&amp;st-dnt"></script><script type="text/javascript" nonce="e8f2362455fb49f09426ab1bb8e" src="//local.adguard.org?ts=1795149488023&amp;name=AdGuard%20Assistant&amp;name=AdGuard%20Extra&amp;name=AdGuard%20Popup%20Blocker&amp;name=Web%20of%20Trust&amp;type=user-script"></script></head><body><div class="app"><div class="top"><b>CHAGALL · A LITTLE PRE-VISIT JOURNEY</b><span id="count">01 / 18</span></div><div class="bar"><i id="progress"></i></div><main class="deck" id="deck">
-<section class="slide active"><div class="hero"><div class="k">PRE-VISIT FIELD GUIDE · 약 23분</div><h1>샤갈:<br><span class="blue">너머의</span><br><span class="gold">여정</span></h1><p class="lead">그림 읽는 눈 여섯 개만 챙기고 떠나는 작은 예습 여행.</p><div class="pills"><span class="pill">사랑</span><span class="pill">기억</span><span class="pill">동물</span><span class="pill">색</span><span class="pill">꿈</span><span class="pill">눈</span></div><p class="small" style="margin-top:30px">전시장에 들어가기 전에, 샤갈의 세계를 먼저 살짝 들여다보자.</p></div></section>
+@media(min-width:700px){
+  .slide{max-width:520px;left:50%;right:auto;width:100%;transform:translateX(calc(-50% + 7%));border-left:1px solid #30394b;border-right:1px solid #30394b}
+  .slide.active{transform:translateX(-50%)}.slide.prev{transform:translateX(calc(-50% - 7%))}
+  .controls{justify-content:center;gap:20px}
+  .toc-modal{align-items:center}
+  .toc-sheet{border-radius:20px;border:1px solid #3c465e}
+}
+</style><script type="text/javascript" nonce="e8f2362455fb49f09426ab1bb8e" src="//local.adguard.org?ts=1795149488023&amp;type=content-script&amp;dmn=contribution.usercontent.google.com&amp;url=https%3A%2F%2Fcontribution.usercontent.google.com%2Fdownload%3Fc%3DCgxiYXJkX3N0b3JhZ2USUBINcmVzcG9uc2VfZGF0YRo_CjBiMzFjYTM3MjM0NWY0NDU3MDAwNjYwYWU3ZjI5MWZiNDAxMzA1ZDM1NGUyZmMwZDgSCxIHEJ2IsvWZHhgB%26filename%3Dchagall_previsit_iphone_v6.html%26opi%3D103135050&amp;app=msedge.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=1&amp;stealth=1&amp;st-dnt"></script><script type="text/javascript" nonce="e8f2362455fb49f09426ab1bb8e" src="//local.adguard.org?ts=1795149488023&amp;name=AdGuard%20Assistant&amp;name=AdGuard%20Extra&amp;name=Web%20of%20Trust&amp;type=user-script"></script></head><body><div class="app">
+<div class="top">
+  <b>CHAGALL · PRE-VISIT GUIDE</b>
+  <button class="toc-btn" id="tocBtn" aria-label="목차 열기"><span id="count">01 / 18</span> <span>☰</span></button>
+</div>
+<div class="bar"><i id="progress"></i></div>
+<main class="deck" id="deck">
 
-<section class="slide"><div class="k">01 · MEET THE PEOPLE</div><h2>먼저 얼굴부터.<br>샤갈과 벨라</h2><img class="art portrait" src="https://www.marcchagall.com/sites/default/files/styles/photo_cover_m_ret_webp/public/media/marc-chagall-1910-carchives-marc-et-ida-chagall-paris.jpg.webp?itok=qFE6fGAX" alt="Marc Chagall, 1910 portrait"><div class="cap">마르크 샤갈, 1910년경 · Marc and Ida Chagall Archive</div><img class="art portrait" src="https://www.marcchagall.com/sites/default/files/styles/photo_cover_m_ret_webp/public/media/marc-chagall-et-bella-rosenfeld-circa-1910-1911.jpg.webp?itok=kadq_HPL" alt="Marc Chagall and Bella Rosenfeld circa 1910-1911"><div class="cap">마르크 샤갈과 벨라 로젠펠트, 1910–11년경 · Marc and Ida Chagall Archive</div><p class="small">이 사진 속 젊은 두 사람이 앞으로 만날 그림 속 연인들의 주인공이야. 작품 속 얼굴은 사진처럼 똑같지 않으니, 자세와 반복되는 특징도 함께 기억하자.</p></section>
+<section class="slide active" data-chap="INTRO" data-title="샤갈: 너머의 여정">
+  <div class="hero">
+    <div class="hero-bg"><img src="https://www.marcchagall.com/sites/default/files/styles/fullscreen_m_webp/public/media/marc-chagall-double-portrait-au-verre-de-vin-1918-oeuvre-sur-toile.jpg.webp?itok=Tqs1Yti2" alt="" aria-hidden="true"></div>
+    <div class="k">PRE-VISIT FIELD GUIDE · 약 23분</div>
+    <h1>샤갈:<br><span class="blue">너머의</span><br><span class="gold">여정</span></h1>
+    <p class="lead">그림 읽는 눈 여섯 개만 챙기고 떠나는 작은 예습 여행.</p>
+    <div class="pills"><span class="pill">사랑</span><span class="pill">기억</span><span class="pill">동물</span><span class="pill">색</span><span class="pill">꿈</span><span class="pill">눈</span></div>
+    <p class="small" style="margin-top:30px">전시장에 들어가기 전에, 샤갈의 세계를 먼저 살짝 들여다보자.</p>
+  </div>
+</section>
 
-<section class="slide"><div class="k">01 · FACE CLUES</div><h2>그림 속 두 사람을<br>알아보는 암호</h2><div class="grid"><div class="card"><span class="tag">MARC</span><h3>샤갈</h3><p class="small">곱슬머리, 화가 모자, 붓과 팔레트. 그림 속에서 몸을 뒤로 젖히거나 공중에 뜨기도 해.</p></div><div class="card"><span class="tag">BELLA</span><h3>벨라</h3><p class="small">크고 둥근 눈, 검은 머리. 검은 드레스와 큰 흰 칼라가 반복되는 시각적 단서야.</p></div></div><img class="art" src="https://www.marcchagall.com/sites/default/files/styles/fullscreen_m_webp/public/media/marc-chagall-bella-au-col-blanc-1917-oeuvre-sur-toile.jpg.webp?itok=XHRi9nnR" alt="Bella with White Collar, 1917"><div class="cap">마르크 샤갈, 〈흰 칼라의 벨라〉, 1917 · Marc and Ida Chagall Archive 공식 작품 자료</div><p class="small">퐁피두센터 해설은 벨라를 거대한 마돈나처럼 묘사했다고 설명해. 화면 아래에는 딸 이다와 함께 있는 샤갈도 작게 등장해.</p><details><summary>발표자 노트</summary><p>둘은 1909년 무렵 만났고 1915년 결혼했어. 벨라는 작가이자 샤갈의 솔직한 비평가였어. 1944년 벨라가 세상을 떠난 뒤 샤갈은 오랫동안 깊은 상실을 겪었지.</p></details></section>
+<section class="slide" data-chap="01 · 사랑" data-title="먼저 얼굴부터: 샤갈과 벨라">
+  <div class="k">01 · MEET THE PEOPLE</div>
+  <h2>먼저 얼굴부터.<br>샤갈과 벨라</h2>
+  <div class="art-wrap"><img class="art portrait" loading="lazy" src="https://www.marcchagall.com/sites/default/files/styles/photo_cover_m_ret_webp/public/media/marc-chagall-1910-carchives-marc-et-ida-chagall-paris.jpg.webp?itok=qFE6fGAX" alt="Marc Chagall, 1910 portrait"></div>
+  <div class="cap">마르크 샤갈, 1910년경 · Marc and Ida Chagall Archive</div>
+  <div class="art-wrap"><img class="art portrait" loading="lazy" src="https://www.marcchagall.com/sites/default/files/styles/photo_cover_m_ret_webp/public/media/marc-chagall-et-bella-rosenfeld-circa-1910-1911.jpg.webp?itok=kadq_HPL" alt="Marc Chagall and Bella Rosenfeld circa 1910-1911"></div>
+  <div class="cap">마르크 샤갈과 벨라 로젠펠트, 1910–11년경 · Marc and Ida Chagall Archive</div>
+  <p class="small">이 사진 속 젊은 두 사람이 앞으로 만날 그림 속 연인들의 주인공이야. 작품 속 얼굴은 사진처럼 똑같지 않으니, 자세와 반복되는 특징도 함께 기억하자.</p>
+</section>
 
-<section class="slide"><div class="k">01 · THE BIRTHDAY</div><h2>사랑은 중력을<br>잠시 잊게 한다</h2><img class="art" src="https://www.marcchagall.com/sites/default/files/styles/fullscreen_m_webp/public/media/marc-chagall-lanniversaire-1915-oeuvre-sur-papier_0.jpg.webp?itok=DlZfWnCq" alt="Marc Chagall, Birthday, 1915"><div class="cap">마르크 샤갈, 〈생일〉(Birthday / L'Anniversaire), 1915 · Marc Chagall 공식 작품 아카이브. MoMA 소장 작품과 동일 작품</div><p class="lead">샤갈은 목을 뒤로 꺾어 벨라에게 키스하고, 두 사람은 방 안에서 떠올라.</p><p class="small">벨라의 생일이 아니라 샤갈 자신의 생일에 벨라가 꽃다발을 선물한 일을 기념한 그림으로 알려져 있어. 이 장면을 통해 샤갈이 사랑을 어떻게 공간과 신체의 법칙을 넘어서는 이미지로 표현했는지 살펴보자.</p><details><summary>발표자 노트</summary><p>이번 슬라이드는 반드시 이 이미지가 〈생일〉인지 확인했어. 작품 공식 페이지는 1915년, 유화·판지, 두 연인이 공중에 떠 있는 구성을 설명해. 이전 버전의 잘못된 이미지(〈나와 마을〉)를 교체했어.</p></details></section>
+<section class="slide" data-chap="01 · 사랑" data-title="그림 속 두 사람을 알아보는 암호">
+  <div class="k">01 · FACE CLUES</div>
+  <h2>그림 속 두 사람을<br>알아보는 암호</h2>
+  <div class="grid">
+    <div class="card"><span class="tag">MARC</span><h3>샤갈</h3><p class="small">곱슬머리, 화가 모자, 붓과 팔레트. 그림 속에서 몸을 뒤로 젖히거나 공중에 뜨기도 해.</p></div>
+    <div class="card"><span class="tag">BELLA</span><h3>벨라</h3><p class="small">크고 둥근 눈, 검은 머리. 검은 드레스와 큰 흰 칼라가 반복되는 시각적 단서야.</p></div>
+  </div>
+  <div class="art-wrap" style="margin-top:12px"><img class="art" loading="lazy" src="https://www.marcchagall.com/sites/default/files/styles/fullscreen_m_webp/public/media/marc-chagall-bella-au-col-blanc-1917-oeuvre-sur-toile.jpg.webp?itok=XHRi9nnR" alt="Bella with White Collar, 1917"></div>
+  <div class="cap">마르크 샤갈, 〈흰 칼라의 벨라〉, 1917 · Marc and Ida Chagall Archive <span class="badge-pompidou">POMPIDOU COLLECTION</span></div>
+  <p class="small">퐁피두센터 해설은 벨라를 거대한 마돈나처럼 묘사했다고 설명해. 화면 아래에는 딸 이다와 함께 있는 샤갈도 작게 등장해.</p>
+  <details><summary>발표자 노트</summary><p>둘은 1909년 무렵 만났고 1915년 결혼했어. 벨라는 작가이자 샤갈의 솔직한 비평가였어. 1944년 벨라가 세상을 떠난 뒤 샤갈은 오랫동안 깊은 상실을 겪었지.</p></details>
+</section>
 
-<section class="slide"><div class="k">01 · LOVE TAKES FLIGHT</div><h2>두 사람은 그림마다<br>다른 방식으로 날아</h2><img class="art" src="https://www.marcchagall.com/sites/default/files/styles/fullscreen_m_webp/public/media/marc-chagall-double-portrait-au-verre-de-vin-1918-oeuvre-sur-toile.jpg.webp?itok=Tqs1Yti2" alt="Double Portrait With a Glass of Wine"><div class="cap">마르크 샤갈, 〈포도주 잔을 든 이중 초상〉, 1917–18 · Marc Chagall 공식 아카이브</div><p class="lead">샤갈은 벨라의 어깨 위에 올라타고, 손에는 포도주 잔을 들고 있어.</p><p class="small">공식 해설에 따르면 두 사람은 딸 이다의 탄생과 결혼의 행복을 기념하듯 비테프스크 위로 솟아올라. 사랑의 기쁨을 축제처럼 그린 작품이야.</p></section>
+<section class="slide" data-chap="01 · 사랑" data-title="〈생일〉: 사랑은 중력을 잊게 한다">
+  <div class="k">01 · THE BIRTHDAY</div>
+  <h2>사랑은 중력을<br>잠시 잊게 한다</h2>
+  <div class="art-wrap"><img class="art" loading="lazy" src="https://www.marcchagall.com/sites/default/files/styles/fullscreen_m_webp/public/media/marc-chagall-lanniversaire-1915-oeuvre-sur-papier_0.jpg.webp?itok=DlZfWnCq" alt="Marc Chagall, Birthday, 1915"></div>
+  <div class="cap">마르크 샤갈, 〈생일〉(Birthday), 1915 · MoMA 소장 (Marc Chagall 공식 아카이브)</div>
+  <p class="lead">샤갈은 목을 뒤로 꺾어 벨라에게 키스하고, 두 사람은 방 안에서 떠올라.</p>
+  <p class="small">벨라의 생일이 아니라 샤갈 자신의 생일에 벨라가 꽃다발을 선물한 일을 기념한 그림으로 알려져 있어. 이 장면을 통해 샤갈이 사랑을 어떻게 공간과 신체의 법칙을 넘어서는 이미지로 표현했는지 살펴보자.</p>
+  <details><summary>발표자 노트</summary><p>작품 공식 페이지는 1915년, 유화·판지, 두 연인이 공중에 떠 있는 구성을 설명해.</p></details>
+</section>
 
-<section class="slide"><div class="k">02 · A LIFE IN MOTION</div><h2>샤갈의 인생은<br>긴 이동 경로였다</h2><div class="timeline"><div class="t"><div class="yr">1887–1907</div><div class="event"><b>비테프스크</b><span>하시딕 유대인 공동체, 가족과 마을의 기억.</span></div></div><div class="t"><div class="yr">1907–10</div><div class="event"><b>상트페테르부르크</b><span>미술 공부. 벨라와 만남.</span></div></div><div class="t"><div class="yr">1911–14</div><div class="event"><b>파리</b><span>색채와 입체파적 구성 실험. 고향의 기억과 현대 회화의 만남.</span></div></div><div class="t"><div class="yr">1914–22</div><div class="event"><b>비테프스크 · 모스크바</b><span>전쟁으로 귀향, 결혼과 딸 이다의 탄생. 날아오르는 연인들.</span></div></div><div class="t"><div class="yr">1922–40</div><div class="event"><b>베를린 · 파리 · 프랑스</b><span>판화와 자서전, 성서 주제의 심화.</span></div></div><div class="t"><div class="yr">1941–48</div><div class="event"><b>뉴욕</b><span>나치를 피해 망명. 1944년 벨라의 죽음.</span></div></div><div class="t"><div class="yr">1948–85</div><div class="event"><b>프랑스 남부</b><span>도자·조각·스테인드글라스·대형 벽화로 확장.</span></div></div></div><p class="small">파리 도착 시기는 자료에 따라 1910년 또는 1911년으로 다르게 기록돼. 여기서는 1911년 봄 파리 도착을 기준으로 표시했어.</p></section>
+<section class="slide" data-chap="01 · 사랑" data-title="〈포도주 잔을 든 이중 초상〉">
+  <div class="k">01 · LOVE TAKES FLIGHT</div>
+  <h2>두 사람은 그림마다<br>다른 방식으로 날아</h2>
+  <div class="art-wrap"><img class="art" loading="lazy" src="https://www.marcchagall.com/sites/default/files/styles/fullscreen_m_webp/public/media/marc-chagall-double-portrait-au-verre-de-vin-1918-oeuvre-sur-toile.jpg.webp?itok=Tqs1Yti2" alt="Double Portrait With a Glass of Wine"></div>
+  <div class="cap">마르크 샤갈, 〈포도주 잔을 든 이중 초상〉, 1917–18 · Marc Chagall 공식 아카이브 <span class="badge-pompidou">POMPIDOU COLLECTION</span></div>
+  <p class="lead">샤갈은 벨라의 어깨 위에 올라타고, 손에는 포도주 잔을 들고 있어.</p>
+  <p class="small">공식 해설에 따르면 두 사람은 딸 이다의 탄생과 결혼의 행복을 기념하듯 비테프스크 위로 솟아올라. 사랑의 기쁨을 축제처럼 그린 작품이야.</p>
+</section>
 
-<section class="slide"><div class="k">02 · PARIS & THE SELF</div><h2>두 세계 사이에 선<br>화가의 자화상</h2><img class="art" src="https://www.marcchagall.com/sites/default/files/styles/fullscreen_m_webp/public/media/marc-chagall-autoportrait-aux-sept-doigts-1913-oeuvre-sur-toile_0.jpg.webp?itok=N_16Z8ZA" alt="Self portrait with Seven Fingers"><div class="cap">마르크 샤갈, 〈일곱 손가락의 자화상〉, 1912–13 · Marc Chagall 공식 아카이브</div><p class="lead">창밖에는 파리의 에펠탑과 꿈처럼 떠 있는 비테프스크가 함께 있어.</p><p class="small">공식 해설은 이 작품을 파리와 러시아 사이에서 자신의 정체성을 묻는 자화상으로 읽어. 화면 속 이디시어로 쓰인 ‘러시아’와 ‘파리’도 찾아보자.</p></section>
+<section class="slide" data-chap="02 · 생애와 정체성" data-title="샤갈의 이동 연대기 (1887–1985)">
+  <div class="k">02 · A LIFE IN MOTION</div>
+  <h2>샤갈의 인생은<br>긴 이동 경로였다</h2>
+  <div class="timeline">
+    <div class="t"><div class="yr">1887–1907</div><div class="event"><b>비테프스크</b><span>하시딕 유대인 공동체, 가족과 마을의 기억.</span></div></div>
+    <div class="t"><div class="yr">1907–10</div><div class="event"><b>상트페테르부르크</b><span>미술 공부. 벨라와 만남.</span></div></div>
+    <div class="t"><div class="yr">1911–14</div><div class="event"><b>파리</b><span>색채와 입체파적 구성 실험. 고향의 기억과 현대 회화의 만남.</span></div></div>
+    <div class="t"><div class="yr">1914–22</div><div class="event"><b>비테프스크 · 모스크바</b><span>전쟁으로 귀향, 결혼과 딸 이다의 탄생. 날아오르는 연인들.</span></div></div>
+    <div class="t"><div class="yr">1922–40</div><div class="event"><b>베를린 · 파리 · 프랑스</b><span>판화와 자서전, 성서 주제의 심화.</span></div></div>
+    <div class="t"><div class="yr">1941–48</div><div class="event"><b>뉴욕</b><span>나치를 피해 망명. 1944년 벨라의 죽음.</span></div></div>
+    <div class="t"><div class="yr">1948–85</div><div class="event"><b>프랑스 남부</b><span>도자·조각·스테인드글라스·대형 벽화로 확장.</span></div></div>
+  </div>
+  <p class="small">파리 도착 시기는 자료에 따라 1910년 또는 1911년으로 다르게 기록돼. 여기서는 1911년 봄 파리 도착을 기준으로 표시했어.</p>
+</section>
 
-<section class="slide"><div class="k">03 · ANIMALS & MEMORY</div><h2>고향의 동물들은<br>그림 속에서 다시 살아</h2><img class="art" src="https://www.marcchagall.com/sites/default/files/styles/fullscreen_m_webp/public/media/marc-chagall-le-coq-1947-oeuvre-sur-toile.jpg.webp?itok=P7pAJNln" alt="Marc Chagall, The Rooster, 1947"><div class="cap">마르크 샤갈, 〈수탉〉, 1947 · Marc Chagall 공식 작품 아카이브</div><p class="small">샤갈의 동물들은 농촌의 생활 기억, 유대 민속, 음악과 축제의 분위기를 불러와. 동물마다 하나의 뜻을 기계적으로 붙이기보다, 누구와 함께 있고 어떤 표정인지 살펴보자.</p><div class="card"><h3>찾아볼 친구들</h3><p class="small">염소 · 소 · 수탉 · 말 · 당나귀 · 물고기. 동물은 고향의 풍경이자 화가의 기억을 옮기는 존재야.</p></div></section>
+<section class="slide" data-chap="02 · 생애와 정체성" data-title="〈일곱 손가락의 자화상〉">
+  <div class="k">02 · PARIS & THE SELF</div>
+  <h2>두 세계 사이에 선<br>화가의 자화상</h2>
+  <div class="art-wrap"><img class="art" loading="lazy" src="https://www.marcchagall.com/sites/default/files/styles/fullscreen_m_webp/public/media/marc-chagall-autoportrait-aux-sept-doigts-1913-oeuvre-sur-toile_0.jpg.webp?itok=N_16Z8ZA" alt="Self portrait with Seven Fingers"></div>
+  <div class="cap">마르크 샤갈, 〈일곱 손가락의 자화상〉, 1912–13 · 암스테르담 시립미술관 소장 (Marc Chagall 공식 아카이브)</div>
+  <p class="lead">창밖에는 파리의 에펠탑과 꿈처럼 떠 있는 비테프스크가 함께 있어.</p>
+  <p class="small">공식 해설은 이 작품을 파리와 러시아 사이에서 자신의 정체성을 묻는 자화상으로 읽어. 화면 속 이디시어로 쓰인 ‘러시아’와 ‘파리’도 찾아보자.</p>
+</section>
 
-<section class="slide"><div class="k">03 · THE VILLAGE</div><h2>고향은 멀리 있어도<br>화면 안에서 함께 산다</h2><img class="art" src="https://www.marcchagall.com/sites/default/files/styles/fullscreen_m_webp/public/media/marc-chagall-moi-et-le-village-1911-oeuvre-sur-toile_0.jpg.webp?itok=lI_DYT_w" alt="I and the Village, 1911"><div class="cap">마르크 샤갈, 〈나와 마을〉, 1911 · MoMA 소장</div><p class="lead">농부와 동물, 마을과 기억이 하나의 화면 안에서 서로를 바라봐.</p><p class="small">MoMA는 농부와 소의 눈을 잇는 선을 서로 의존하는 관계의 표시로 설명해. 이 작품은 이 슬라이드에서만 한 번 등장해.</p></section>
+<section class="slide" data-chap="03 · 동물과 고향" data-title="고향의 동물들: 〈수탉〉">
+  <div class="k">03 · ANIMALS & MEMORY</div>
+  <h2>고향의 동물들은<br>그림 속에서 다시 살아</h2>
+  <div class="art-wrap"><img class="art" loading="lazy" src="https://www.marcchagall.com/sites/default/files/styles/fullscreen_m_webp/public/media/marc-chagall-le-coq-1947-oeuvre-sur-toile.jpg.webp?itok=P7pAJNln" alt="Marc Chagall, The Rooster, 1947"></div>
+  <div class="cap">마르크 샤갈, 〈수탉〉, 1947 · Marc Chagall 공식 작품 아카이브 <span class="badge-pompidou">POMPIDOU COLLECTION</span></div>
+  <p class="small">샤갈의 동물들은 농촌의 생활 기억, 유대 민속, 음악과 축제의 분위기를 불러와. 동물마다 하나의 뜻을 기계적으로 붙이기보다, 누구와 함께 있고 어떤 표정인지 살펴보자.</p>
+  <div class="card"><h3>찾아볼 친구들</h3><p class="small">염소 · 소 · 수탉 · 말 · 당나귀 · 물고기. 동물은 고향의 풍경이자 화가의 기억을 옮기는 존재야.</p></div>
+</section>
 
-<section class="slide"><div class="k">03 · ANIMALS, AGAIN</div><h2>바이올린 소리가<br>그림 밖으로 흘러나온다</h2><img class="art" src="https://www.marcchagall.com/sites/default/files/styles/fullscreen_m_webp/public/media/marc-chagall-la-vache-lombrelle-1946-oeuvre-sur-toile_0.jpg.webp?itok=Brr2rRCL" alt="Cow With a Parasol, 1946"><div class="cap">마르크 샤갈, 〈양산을 쓴 암소〉, 1946 · Marc Chagall 공식 아카이브</div><p class="lead">암소는 양산 아래에 있고, 주변에는 강렬한 붉은색과 태양 같은 원형이 떠 있어.</p><p class="small">샤갈의 동물들은 어린 시절 농장과 고향의 기억에서 왔지만, 화면 안에서는 유머와 상상력으로 새롭게 변신해.</p></section>
+<section class="slide" data-chap="03 · 동물과 고향" data-title="〈나와 마을〉: 농부와 소의 시선">
+  <div class="k">03 · THE VILLAGE</div>
+  <h2>고향은 멀리 있어도<br>화면 안에서 함께 산다</h2>
+  <div class="art-wrap"><img class="art" loading="lazy" src="https://www.marcchagall.com/sites/default/files/styles/fullscreen_m_webp/public/media/marc-chagall-moi-et-le-village-1911-oeuvre-sur-toile_0.jpg.webp?itok=lI_DYT_w" alt="I and the Village, 1911"></div>
+  <div class="cap">마르크 샤갈, 〈나와 마을〉, 1911 · MoMA 소장</div>
+  <p class="lead">농부와 동물, 마을과 기억이 하나의 화면 안에서 서로를 바라봐.</p>
+  <p class="small">MoMA는 농부와 소의 눈을 잇는 선을 서로 의존하는 관계의 표시로 설명해.</p>
+</section>
 
-<section class="slide"><div class="k">04 · COLOR</div><h2>색은 사전이 아니라<br>감정의 온도계</h2><p class="lead">샤갈은 현실의 색을 그대로 옮기지 않아. 파란 소와 초록 얼굴은 ‘틀린 색’이 아니라 감정이 선택한 색일 수 있어.</p><div class="swatches"><div class="sw" style="background:#3159a8">파랑</div><div class="sw" style="background:#c84037">빨강</div><div class="sw" style="background:#4e815b">초록</div><div class="sw" style="background:#d5ad3c">노랑</div><div class="sw" style="background:#eee9dc;color:#333">하양</div></div><div class="card"><h3 class="blue">파랑</h3><p class="small">영적·천상적 분위기, 슬픔과 깊이.</p></div><div class="card"><h3 class="red">빨강</h3><p class="small">사랑과 열정, 피와 불길. 맥락에 따라 감정이 달라져.</p></div><div class="card"><h3 style="color:#a9d6a8">초록 · 노랑</h3><p class="small">생명과 자연, 낯설고 비현실적인 분위기를 함께 만들 수 있어.</p></div><div class="card"><h3>하양</h3><p class="small">빛과 순수뿐 아니라 희생과 애도의 이미지도 불러와.</p></div><p class="small">※ 색의 의미는 고정된 암호가 아니야. 작품의 장면과 시대를 함께 봐야 해.</p></section>
+<section class="slide" data-chap="03 · 동물과 고향" data-title="〈양산을 쓴 암소〉">
+  <div class="k">03 · ANIMALS, AGAIN</div>
+  <h2>바이올린 소리가<br>그림 밖으로 흘러나온다</h2>
+  <div class="art-wrap"><img class="art" loading="lazy" src="https://www.marcchagall.com/sites/default/files/styles/fullscreen_m_webp/public/media/marc-chagall-la-vache-lombrelle-1946-oeuvre-sur-toile_0.jpg.webp?itok=Brr2rRCL" alt="Cow With a Parasol, 1946"></div>
+  <div class="cap">마르크 샤갈, 〈양산을 쓴 암소〉, 1946 · Marc Chagall 공식 아카이브 <span class="badge-pompidou">POMPIDOU COLLECTION</span></div>
+  <p class="lead">암소는 양산 아래에 있고, 주변에는 강렬한 붉은색과 태양 같은 원형이 떠 있어.</p>
+  <p class="small">샤갈의 동물들은 어린 시절 농장과 고향의 기억에서 왔지만, 화면 안에서는 유머와 상상력으로 새롭게 변신해.</p>
+</section>
 
-<section class="slide"><div class="k">05 · MEMORY & DREAM</div><h2>사람은 하늘을 날고<br>기억은 현재가 된다</h2><img class="art" src="https://www.marcchagall.com/sites/default/files/styles/fullscreen_m_webp/public/media/marc-chagall-au-dessus-de-la-ville-1917-oeuvre-sur-toile_1.jpg.webp?itok=Q0OPLVmk" alt="Over the City, 1917"><div class="cap">마르크 샤갈, 〈도시 위에서〉, 1917 · Marc Chagall 공식 아카이브</div><p class="lead">연인은 비테프스크 위를 날아. 현실의 중력보다 기억과 감정의 힘이 더 강한 장면이지.</p><p class="small">샤갈은 파리에서 살면서도 고향을 반복해 그렸어. 기억은 과거의 복사본이 아니라 현재의 감정과 섞여 다시 나타나.</p></section>
+<section class="slide" data-chap="04 · 색채" data-title="색은 감정의 온도계">
+  <div class="k">04 · COLOR</div>
+  <h2>색은 사전이 아니라<br>감정의 온도계</h2>
+  <p class="lead">샤갈은 현실의 색을 그대로 옮기지 않아. 파란 소와 초록 얼굴은 ‘틀린 색’이 아니라 감정이 선택한 색일 수 있어.</p>
+  <div class="swatches"><div class="sw" style="background:#3159a8">파랑</div><div class="sw" style="background:#c84037">빨강</div><div class="sw" style="background:#4e815b">초록</div><div class="sw" style="background:#d5ad3c">노랑</div><div class="sw" style="background:#eee9dc;color:#333">하양</div></div>
+  <div class="card"><h3 class="blue">파랑</h3><p class="small">영적·천상적 분위기, 슬픔과 깊이.</p></div>
+  <div class="card"><h3 class="red">빨강</h3><p class="small">사랑과 열정, 피와 불길. 맥락에 따라 감정이 달라져.</p></div>
+  <div class="card"><h3 style="color:#a9d6a8">초록 · 노랑</h3><p class="small">생명과 자연, 낯설고 비현실적인 분위기를 함께 만들 수 있어.</p></div>
+  <div class="card"><h3>하양</h3><p class="small">빛과 순수뿐 아니라 희생과 애도의 이미지도 불러와.</p></div>
+  <p class="small">※ 색의 의미는 고정된 암호가 아니야. 작품의 장면과 시대를 함께 봐야 해.</p>
+</section>
 
-<section class="slide"><div class="k">05 · HISTORY ENTERS THE CANVAS</div><h2>아름다운 색채만으로<br>샤갈을 기억하면 안 돼</h2><img class="art" src="https://www.marcchagall.com/sites/default/files/styles/fullscreen_m_webp/public/media/marc-chagall-crucifixion-blanche-1938-oeuvre-sur-toile.jpg.webp?itok=xwisZv4B" alt="White Crucifixion, 1938"><div class="cap">마르크 샤갈, 〈하얀 십자가〉, 1938 · Marc Chagall 공식 아카이브</div><p class="lead">십자가의 예수는 유대인의 기도 숄을 두르고 있고, 주변에는 불타는 마을과 피난하는 사람들이 있어.</p><p class="small">공식 해설은 이 작품을 유럽의 반유대주의와 전쟁의 위협 속에서 탄생한 작품으로 설명해. 샤갈의 그림에는 사랑과 유머뿐 아니라 시대의 폭력과 고통도 함께 있어.</p></section>
+<section class="slide" data-chap="05 · 꿈과 시대의 어둠" data-title="〈도시 위에서〉: 기억은 현재가 된다">
+  <div class="k">05 · MEMORY & DREAM</div>
+  <h2>사람은 하늘을 날고<br>기억은 현재가 된다</h2>
+  <div class="art-wrap"><img class="art" loading="lazy" src="https://www.marcchagall.com/sites/default/files/styles/fullscreen_m_webp/public/media/marc-chagall-au-dessus-de-la-ville-1917-oeuvre-sur-toile_1.jpg.webp?itok=Q0OPLVmk" alt="Over the City, 1917"></div>
+  <div class="cap">마르크 샤갈, 〈도시 위에서〉, 1917 · 트레티야코프 미술관 소장 (Marc Chagall 공식 아카이브)</div>
+  <p class="lead">연인은 비테프스크 위를 날아. 현실의 중력보다 기억과 감정의 힘이 더 강한 장면이지.</p>
+  <p class="small">샤갈은 파리에서 살면서도 고향을 반복해 그렸어. 기억은 과거의 복사본이 아니라 현재의 감정과 섞여 다시 나타나.</p>
+</section>
 
-<section class="slide"><div class="k">05 · THE FALLING ANGEL</div><h2>천사조차<br>추락하는 시대</h2><img class="art" src="https://www.marcchagall.com/sites/default/files/styles/fullscreen_m_webp/public/media/marc-chagall-la-chute-de-lange-ou-lapparition-rouge-1947-oeuvre-sur-toile_0.jpg.webp?itok=NSdmRpnD" alt="The Falling Angel"><div class="cap">마르크 샤갈, 〈추락하는 천사〉, 1923–47 · Marc Chagall 공식 아카이브</div><p class="lead">오랜 시간에 걸쳐 완성된 이 작품은 천사의 추락과 혼란스러운 시대의 감각을 한 화면에 담아.</p><p class="small">샤갈의 상징은 단순한 사전처럼 풀리지 않아. 화면 속 시계, 동물, 인물, 색이 어떤 긴장감을 만드는지 직접 관찰해 보자.</p></section>
+<section class="slide" data-chap="05 · 꿈과 시대의 어둠" data-title="〈하얀 십자가〉: 시대의 고통">
+  <div class="k">05 · HISTORY ENTERS THE CANVAS</div>
+  <h2>아름다운 색채만으로<br>샤갈을 기억하면 안 돼</h2>
+  <div class="art-wrap"><img class="art" loading="lazy" src="https://www.marcchagall.com/sites/default/files/styles/fullscreen_m_webp/public/media/marc-chagall-crucifixion-blanche-1938-oeuvre-sur-toile.jpg.webp?itok=xwisZv4B" alt="White Crucifixion, 1938"></div>
+  <div class="cap">마르크 샤갈, 〈하얀 십자가〉, 1938 · 시카고 미술관 소장 (Marc Chagall 공식 아카이브)</div>
+  <p class="lead">십자가의 예수는 유대인의 기도 숄을 두르고 있고, 주변에는 불타는 마을과 피난하는 사람들이 있어.</p>
+  <p class="small">공식 해설은 이 작품을 유럽의 반유대주의와 전쟁의 위협 속에서 탄생한 작품으로 설명해. 샤갈의 그림에는 사랑과 유머뿐 아니라 시대의 폭력과 고통도 함께 있어.</p>
+</section>
 
-<section class="slide"><div class="k">06 · THE POET</div><h2>시인의 눈은<br>세상을 거꾸로 본다</h2><img class="art" src="https://static.museothyssen.org/microsites/exposiciones/2012/chagall/assets/img/content/chagall1.jpg" alt="Marc Chagall, Half-Past Three (The Poet), 1911"><div class="cap">마르크 샤갈, 〈세 시 반〉(〈시인〉), 1911 · Philadelphia Museum of Art 소장 · 이미지 제공: Museo Nacional Thyssen-Bornemisza</div><p class="lead">초록빛 얼굴의 시인은 머리를 거꾸로 한 채 앉아 있어. 몸의 방향과 공간의 질서가 뒤집히면서, 익숙한 세계가 낯선 시선으로 다시 태어나지.</p><p class="small">이 작품은 샤갈이 파리에서 전통적인 회화의 규칙을 흔들며 자신만의 시각 언어를 찾아가던 시기의 그림이야. 시인은 단지 글을 쓰는 사람이 아니라, 현실을 다른 각도에서 감각하고 재구성하는 존재로 읽어볼 수 있어.</p><div class="card"><h3>그림 앞에서 찾아볼 것</h3><p class="small">초록색 얼굴과 뒤집힌 머리 · 화면을 가르는 붉은 면 · 시인의 손과 악기처럼 보이는 물건 · 현실과 환상이 만나는 경계</p></div><p class="small">⭐ 시인의 거꾸로 된 자세를 ‘세상을 뒤집어 보는 상상력’의 은유로 읽는 것은 이 발표에서 제안하는 감상 가설이야.</p></section>
+<section class="slide" data-chap="05 · 꿈과 시대의 어둠" data-title="〈추락하는 천사〉">
+  <div class="k">05 · THE FALLING ANGEL</div>
+  <h2>천사조차<br>추락하는 시대</h2>
+  <div class="art-wrap"><img class="art" loading="lazy" src="https://www.marcchagall.com/sites/default/files/styles/fullscreen_m_webp/public/media/marc-chagall-la-chute-de-lange-ou-lapparition-rouge-1947-oeuvre-sur-toile_0.jpg.webp?itok=NSdmRpnD" alt="The Falling Angel"></div>
+  <div class="cap">마르크 샤갈, 〈추락하는 천사〉, 1923–47 · 바젤 미술관 소장 (Marc Chagall 공식 아카이브)</div>
+  <p class="lead">오랜 시간에 걸쳐 완성된 이 작품은 천사의 추락과 혼란스러운 시대의 감각을 한 화면에 담아.</p>
+  <p class="small">샤갈의 상징은 단순한 사전처럼 풀리지 않아. 화면 속 시계, 동물, 인물, 색이 어떤 긴장감을 만드는지 직접 관찰해 보자.</p>
+</section>
 
-<section class="slide"><div class="k">THE VIEWING GAME</div><h2>전시장에서는<br>이 여섯 가지를 찾아보자</h2><label class="check"><input type="checkbox">벨라 찾기: 검은 머리, 큰 눈, 흰 칼라</label><label class="check"><input type="checkbox">샤갈 찾기: 곱슬머리, 붓이나 팔레트, 날아오르는 자세</label><label class="check"><input type="checkbox">첫 방과 마지막 방의 색 온도 비교하기</label><label class="check"><input type="checkbox">동물 한 마리의 눈빛과 시선 읽기</label><label class="check"><input type="checkbox">전쟁과 종교를 다룬 작품 앞에서 잠시 머물기</label><label class="check"><input type="checkbox">가장 오래 바라본 작품을 서로에게 소개하기</label><p class="small" style="margin-top:15px">정답을 맞히는 게임이 아니라, 작품 앞에서 더 오래 머무는 연습이야.</p></section>
+<section class="slide" data-chap="06 · 시선과 감상" data-title="〈시인〉: 한쪽 눈은 현실, 한쪽 눈은 내면">
+  <div class="k">06 · THE POET</div>
+  <h2>한쪽 눈은 현실을,<br>한쪽 눈은 내면을</h2>
+  <div class="art-wrap"><img class="art" loading="lazy" src="https://static.museothyssen.org/microsites/exposiciones/2012/chagall/assets/img/content/chagall1.jpg" alt="Marc Chagall, Half-Past Three (The Poet), 1911"></div>
+  <div class="cap">마르크 샤갈, 〈세 시 반〉(〈시인〉), 1911 · Philadelphia Museum of Art 소장</div>
+  <p class="lead">그림 속 시인은 한쪽 눈을 뜨고 다른 한쪽 눈을 감고 있어. 두 눈이 서로 다른 방향을 향하는 이 모습에서 샤갈의 시선을 떠올려 볼 수 있지.</p>
+  <p class="small">⭐ 뜬 눈으로는 눈앞의 현실을 바라보고, 감은 눈으로는 기억과 꿈, 상상 같은 내면의 세계를 바라본다고 해석해 보자. 샤갈에게 현실과 내면은 서로 등을 돌린 두 세계가 아니라, 한 사람의 시선 안에서 동시에 살아 움직이는 두 층위였을지도 몰라.</p>
+  <div class="card"><h3>그림 앞에서 찾아볼 것</h3><p class="small">뜨고 감은 두 눈 · 초록빛 얼굴 · 뒤집힌 자세 · 붉은색과 흰색이 이루는 공간 · 현실과 내면이 한 화면에 겹쳐지는 방식</p></div>
+  <p class="small">⭐ 이것은 작품의 정답을 선언하는 설명이 아니라, 눈의 모양에서 출발해 샤갈의 예술세계를 읽어보려는 감상 가설이야.</p>
+</section>
 
-<section class="slide"><div class="hero"><div class="k">BEFORE WE ENTER</div><h1>정답보다<br><span class="gold">느낌을</span><br>가져가자.</h1><p class="lead">“이게 무슨 뜻이야?”보다<br>“나는 이렇게 느꼈어.”</p><div class="line"></div><p class="small">샤갈의 그림은 해독해야 할 암호가 아니라, 오래 머물며 대화할 수 있는 세계야. 전시를 보고 나서 가장 오래 눈길이 머문 그림 하나씩 서로에게 소개하자.</p></div></section>
+<section class="slide" data-chap="MISSION" data-title="전시장 관람 체크리스트 (6가지)">
+  <div class="k">THE VIEWING GAME</div>
+  <h2>전시장에서는<br>이 여섯 가지를 찾아보자</h2>
+  <div id="checklist">
+    <label class="check"><input type="checkbox" data-idx="0"><span>벨라 찾기: 검은 머리, 큰 눈, 흰 칼라</span></label>
+    <label class="check"><input type="checkbox" data-idx="1"><span>샤갈 찾기: 곱슬머리, 붓이나 팔레트, 날아오르는 자세</span></label>
+    <label class="check"><input type="checkbox" data-idx="2"><span>첫 방과 마지막 방의 색 온도 비교하기</span></label>
+    <label class="check"><input type="checkbox" data-idx="3"><span>동물 한 마리의 눈빛과 시선 읽기</span></label>
+    <label class="check"><input type="checkbox" data-idx="4"><span>전쟁과 종교를 다룬 작품 앞에서 잠시 머물기</span></label>
+    <label class="check"><input type="checkbox" data-idx="5"><span>가장 오래 바라본 작품을 서로에게 소개하기</span></label>
+  </div>
+  <div class="check-status">
+    <span id="checkCount">달성: 0 / 6 (자동 저장됨)</span>
+    <button class="reset-btn" id="resetChecks" type="button">초기화</button>
+  </div>
+  <p class="small" style="margin-top:12px">정답을 맞히는 게임이 아니라, 작품 앞에서 더 오래 머무는 연습이야.</p>
+</section>
 
-<section class="slide"><div class="k">IMAGE & SOURCE NOTES</div><h2>이미지와 사실의 출처</h2><p class="small">이번 버전은 〈생일〉 이미지를 작가 공식 아카이브의 정확한 작품 페이지 이미지로 교체했고, 〈나와 마을〉은 한 번만 사용했어. 샤갈·벨라의 실제 사진도 공식 Marc and Ida Chagall Archive에서 가져왔어.</p><div class="card"><h3>사진 및 작품 이미지</h3><p class="source">• <a href="https://www.marcchagall.com/en/archives-marc-et--ida-chagall-photographies" target="_blank">Marc and Ida Chagall Archive · Photographs</a><br>• <a href="https://www.marcchagall.com/en/discovery/themes/dream/birthday-1915" target="_blank">Birthday (1915), official work record</a><br>• <a href="https://www.marcchagall.com/en/discovery/themes/love/bella-white-collar-1917" target="_blank">Bella with White Collar (1917)</a><br>• <a href="https://www.marcchagall.com/en/discovery/themes/self-portrait/double-portrait-glass-wine-1918" target="_blank">Double Portrait With a Glass of Wine (1917–18)</a><br>• <a href="https://www.marcchagall.com/en/discovery/themes/self-portrait/self-portrait-seven-fingers-1913" target="_blank">Self-portrait with Seven Fingers (1912–13)</a><br>• <a href="https://www.moma.org/collection/works/78984" target="_blank">MoMA · I and the Village (1911)</a><br>• <a href="https://www.marcchagall.com/en/discovery/themes/love/over-city-1917" target="_blank">Over the City (1917)</a><br>• <a href="https://www.marcchagall.com/en/discovery/themes/politics/white-crucifixion-1938" target="_blank">White Crucifixion (1938)</a><br>• <a href="https://www.marcchagall.com/en/discovery/themes/politics/falling-angel-1947" target="_blank">The Falling Angel (1923–47)</a></p><br>• <a href="https://static.museothyssen.org/microsites/exposiciones/2012/chagall/salas_1_en.html" target="_blank">Museo Thyssen-Bornemisza · Half-Past Three (The Poet), 1911</a></div><div class="card"><h3>저작권 안내</h3><p class="source">작품과 아카이브 사진은 각 권리자에게 저작권이 있어. 공식 사이트는 작품 이미지의 재현에 사전 서면 허가를 요구하고 있어. 이 HTML은 개인 관람 준비용이며, 이미지의 권리를 취득한 것은 아니야. 외부 공개·재배포·상업적 이용은 하지 말고, 별도 사용에는 권리 확인이 필요해. <a href="https://www.marcchagall.com/en/rights-and-reproductions" target="_blank">Rights and Reproductions</a>.</p></div></section>
-</main><div class="controls"><button id="prev">← 이전</button><div class="dots" id="dots"></div><button class="primary" id="next">다음 →</button></div></div>
+<section class="slide" data-chap="OUTRO" data-title="마무리: 정답보다 느낌을">
+  <div class="hero">
+    <div class="k">BEFORE WE ENTER</div>
+    <h1>정답보다<br><span class="gold">느낌을</span><br>가져가자.</h1>
+    <p class="lead">“이게 무슨 뜻이야?”보다<br>“나는 이렇게 느꼈어.”</p>
+    <div class="line"></div>
+    <p class="small">샤갈의 그림은 해독해야 할 암호가 아니라, 오래 머물며 대화할 수 있는 세계야. 전시를 보고 나서 가장 오래 눈길이 머문 그림 하나씩 서로에게 소개하자.</p>
+  </div>
+</section>
+
+<section class="slide" data-chap="NOTES" data-title="이미지와 사실의 출처 및 저작권">
+  <div class="k">IMAGE & SOURCE NOTES</div>
+  <h2>이미지와 사실의 출처</h2>
+  <p class="small">작품 이미지는 작가 공식 아카이브(Marc and Ida Chagall Archive) 및 각 소장 미술관 공식 자료를 기반으로 연결했어.</p>
+  <div class="card"><h3>사진 및 작품 이미지</h3><p class="source">• <a href="https://www.marcchagall.com/en/archives-marc-et--ida-chagall-photographies" target="_blank">Marc and Ida Chagall Archive · Photographs</a><br>• <a href="https://www.marcchagall.com/en/discovery/themes/dream/birthday-1915" target="_blank">Birthday (1915), official work record</a><br>• <a href="https://www.marcchagall.com/en/discovery/themes/love/bella-white-collar-1917" target="_blank">Bella with White Collar (1917) · Centre Pompidou</a><br>• <a href="https://www.marcchagall.com/en/discovery/themes/self-portrait/double-portrait-glass-wine-1918" target="_blank">Double Portrait With a Glass of Wine (1917–18) · Centre Pompidou</a><br>• <a href="https://www.marcchagall.com/en/discovery/themes/self-portrait/self-portrait-seven-fingers-1913" target="_blank">Self-portrait with Seven Fingers (1912–13)</a><br>• <a href="https://www.moma.org/collection/works/78984" target="_blank">MoMA · I and the Village (1911)</a><br>• <a href="https://www.marcchagall.com/en/discovery/themes/love/over-city-1917" target="_blank">Over the City (1917)</a><br>• <a href="https://www.marcchagall.com/en/discovery/themes/politics/white-crucifixion-1938" target="_blank">White Crucifixion (1938)</a><br>• <a href="https://www.marcchagall.com/en/discovery/themes/politics/falling-angel-1947" target="_blank">The Falling Angel (1923–47)</a><br>• <a href="https://static.museothyssen.org/microsites/exposiciones/2012/chagall/salas_1_en.html" target="_blank">Museo Thyssen-Bornemisza · Half-Past Three (The Poet), 1911</a></p></div>
+  <div class="card"><h3>저작권 안내</h3><p class="source">작품과 아카이브 사진은 각 권리자에게 저작권이 있어. 공식 사이트는 작품 이미지의 재현에 사전 서면 허가를 요구하고 있어. 이 HTML은 개인 관람 준비용이며, 이미지의 권리를 취득한 것은 아니야. 외부 공개·재배포·상업적 이용은 하지 말고, 별도 사용에는 권리 확인이 필요해. <a href="https://www.marcchagall.com/en/rights-and-reproductions" target="_blank">Rights and Reproductions</a>.</p></div>
+</section>
+
+</main>
+<div class="controls">
+  <button id="prev">← 이전</button>
+  <div class="dots" id="dots" role="tablist" aria-label="슬라이드 이동"></div>
+  <button class="primary" id="next">다음 →</button>
+</div>
+</div>
+
+<!-- Chapter Jump Menu Modal -->
+<div class="toc-modal" id="tocModal" aria-hidden="true">
+  <div class="toc-sheet">
+    <div class="toc-head">
+      <b>CHAPTER JUMP · 전체 목차</b>
+      <button class="toc-close" id="tocClose" type="button">닫기 ✕</button>
+    </div>
+    <div id="tocList"></div>
+  </div>
+</div>
+
 <script>
-const ss=[...document.querySelectorAll('.slide')],bar=document.getElementById('progress'),count=document.getElementById('count'),dots=document.getElementById('dots'),prev=document.getElementById('prev'),next=document.getElementById('next');let n=0,x=0,y=0;
-ss.forEach((_,i)=>{let d=document.createElement('i');d.className='dot'+(!i?' on':'');dots.appendChild(d)});
-function go(v){n=Math.max(0,Math.min(ss.length-1,v));ss.forEach((s,i)=>{s.classList.toggle('active',i===n);s.classList.toggle('prev',i<n)});[...dots.children].forEach((d,i)=>d.classList.toggle('on',i===n));bar.style.width=((n+1)/ss.length*100)+'%';count.textContent=String(n+1).padStart(2,'0')+' / '+String(ss.length).padStart(2,'0');prev.disabled=n===0;next.disabled=n===ss.length-1;ss[n].scrollTop=0}
-prev.onclick=()=>go(n-1);next.onclick=()=>go(n+1);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();go(n+1)}if(e.key==='ArrowLeft'){e.preventDefault();go(n-1)}});
-const deck=document.getElementById('deck');deck.addEventListener('touchstart',e=>{x=e.changedTouches[0].screenX;y=e.changedTouches[0].screenY},{passive:true});deck.addEventListener('touchend',e=>{let dx=e.changedTouches[0].screenX-x,dy=e.changedTouches[0].screenY-y;if(Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy)*1.2)go(n+(dx<0?1:-1))},{passive:true});go(0);
+const ss=[...document.querySelectorAll('.slide')],
+      bar=document.getElementById('progress'),
+      count=document.getElementById('count'),
+      dots=document.getElementById('dots'),
+      prev=document.getElementById('prev'),
+      next=document.getElementById('next'),
+      tocBtn=document.getElementById('tocBtn'),
+      tocModal=document.getElementById('tocModal'),
+      tocClose=document.getElementById('tocClose'),
+      tocList=document.getElementById('tocList');
+let n=0,x=0,y=0;
+
+// 1. Clickable Dots & TOC generation
+ss.forEach((s,i)=>{
+  const d=document.createElement('button');
+  d.type='button';
+  d.className='dot'+(!i?' on':'');
+  d.setAttribute('aria-label',`${i+1}번 슬라이드로 이동`);
+  d.innerHTML='<i></i>';
+  d.onclick=()=>go(i);
+  dots.appendChild(d);
+
+  const item=document.createElement('button');
+  item.type='button';
+  item.className='toc-item';
+  item.innerHTML=`<span class="toc-num">${String(i+1).padStart(2,'0')}</span><span><span class="toc-title">${s.dataset.title||''}</span><span class="toc-sub">${s.dataset.chap||''}</span></span>`;
+  item.onclick=()=>{go(i);closeToc()};
+  tocList.appendChild(item);
+});
+
+function openToc(){
+  [...tocList.children].forEach((el,i)=>el.classList.toggle('curr',i===n));
+  tocModal.classList.add('open');
+  tocModal.setAttribute('aria-hidden','false');
+}
+function closeToc(){
+  tocModal.classList.remove('open');
+  tocModal.setAttribute('aria-hidden','true');
+}
+tocBtn.onclick=openToc;
+tocClose.onclick=closeToc;
+tocModal.onclick=e=>{if(e.target===tocModal)closeToc()};
+
+function go(v){
+  n=Math.max(0,Math.min(ss.length-1,v));
+  ss.forEach((s,i)=>{s.classList.toggle('active',i===n);s.classList.toggle('prev',i<n)});
+  [...dots.children].forEach((d,i)=>d.classList.toggle('on',i===n));
+  const activeDot=dots.children[n];
+  if(activeDot)activeDot.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});
+  bar.style.width=((n+1)/ss.length*100)+'%';
+  count.textContent=String(n+1).padStart(2,'0')+' / '+String(ss.length).padStart(2,'0');
+  prev.disabled=n===0;
+  next.disabled=n===ss.length-1;
+  ss[n].scrollTop=0;
+}
+
+prev.onclick=()=>go(n-1);
+next.onclick=()=>go(n+1);
+document.addEventListener('keydown',e=>{
+  if(tocModal.classList.contains('open')){if(e.key==='Escape')closeToc();return}
+  if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();go(n+1)}
+  if(e.key==='ArrowLeft'){e.preventDefault();go(n-1)}
+});
+
+const deck=document.getElementById('deck');
+deck.addEventListener('touchstart',e=>{x=e.changedTouches[0].screenX;y=e.changedTouches[0].screenY},{passive:true});
+deck.addEventListener('touchend',e=>{
+  let dx=e.changedTouches[0].screenX-x,dy=e.changedTouches[0].screenY-y;
+  if(Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy)*1.2)go(n+(dx<0?1:-1));
+},{passive:true});
+
+// 2. Image Skeleton & Error Handling
+document.querySelectorAll('.art-wrap img').forEach(img=>{
+  const wrap=img.parentElement;
+  if(img.complete){
+    wrap.classList.add(img.naturalWidth>0?'loaded':'err');
+  }else{
+    img.addEventListener('load',()=>wrap.classList.add('loaded'));
+    img.addEventListener('error',()=>wrap.classList.add('err'));
+  }
+});
+
+// 3. Checklist localStorage Persistence
+const STORAGE_KEY='chagall_previsit_checks_v1';
+const boxes=[...document.querySelectorAll('#checklist input[type="checkbox"]')];
+const checkCount=document.getElementById('checkCount');
+const resetBtn=document.getElementById('resetChecks');
+
+function syncChecks(){
+  const state=boxes.map(b=>b.checked);
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}catch(e){}
+  boxes.forEach(b=>b.closest('.check').classList.toggle('done',b.checked));
+  const done=state.filter(Boolean).length;
+  checkCount.textContent=`달성: ${done} / ${boxes.length} (자동 저장됨)`;
+}
+
+try{
+  const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+  boxes.forEach((b,i)=>{if(saved[i])b.checked=true});
+}catch(e){}
+syncChecks();
+
+boxes.forEach(b=>b.addEventListener('change',syncChecks));
+resetBtn.onclick=()=>{boxes.forEach(b=>b.checked=false);syncChecks()};
+
+go(0);
 </script></body></html>
